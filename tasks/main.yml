@@ -1,0 +1,47 @@
+---
+# tasks file for docker-install
+- name: Include OS-specific variables.
+  include_vars: "{{ ansible_os_family }}.yaml"
+
+- name: Docker is present
+  command: docker --version
+  register: docker_status
+  ignore_errors: yes
+
+- name: Disabled SELinux
+  selinux:
+    state: disabled
+  when: ansible_os_family == "RedHat"
+
+- name: Stop SElinux
+  become: true
+  command: setenforce 0
+  when: ansible_os_family == "RedHat"
+  ignore_errors: true
+
+- name: Disable firewalld
+  become: true
+  systemd:
+    name: firewalld
+    state: stopped
+  when: ansible_os_family == "RedHat"
+
+- name: Install required packages
+  become: yes
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ required_packages }}"
+  when: docker_status.rc != 0
+  
+- name: Include install docker
+  include: install.yml 
+  when: docker_status.rc != 0 and docker is defined
+
+- name: Docker is present
+  command: docker --version
+  register: docker_status
+
+- name: Include install docker
+  include: images.yml
+  when: docker_status.rc == 0 and docker is defined

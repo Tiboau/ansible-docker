@@ -1,0 +1,4 @@
+---
+# defaults file for docker-install
+docker_user: user
+docker_images: hello-world
